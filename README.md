@@ -21,7 +21,7 @@
 	- [x] Local Privilege Escalation via Service Abuse [Lab #05.1]
 	- [x] Domain Privilege Escalation via ACL/Group Abuse [Lab #05.2]
 
-3. [Credential Extraction](./assets/03_crte_credential_extraction.md)
+3. [Credential Extraction](./03_crte_credential_extraction.md)
 	 - Disk-based Credential Extraction
 		- [ ] Registry Hives (SAM, SECURITY, SYSTEM)
 	- Memory-based Credential Extraction
