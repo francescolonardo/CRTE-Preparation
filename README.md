@@ -13,6 +13,6 @@
 
 2. [Privilege Escalation](./02_crte_privilege_escalation.md)
 	- [x] Local Privilege Escalation via Service Abuse [Lab #05.1]
-	- [ ] Domain Privilege Escalation via ACL/Group Abuse [Lab #05.2]
+	- [x] Domain Privilege Escalation via ACL/Group Abuse [Lab #05.2]
 
 
