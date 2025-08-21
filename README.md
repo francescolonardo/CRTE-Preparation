@@ -1,4 +1,10 @@
-# CRTE-Preparation
+# Certified Red Team Expert (CRTE) - Study Material
+
+## Introduction
+
+???
+
+## Learning Path Topics
 
 1. [Domain Enumeration](./01_crte_domain_enumeration.md)
 	- [x] Domain User Enumeration [Lab #01]
