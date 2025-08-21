@@ -33,6 +33,18 @@
 	- Replication-based Credential Extraction
 		- [ ] DCSync Attack
 
+4. [Kerberos Attacks](./04_crte_kerberos_attacks.md)
+	- Kerberos Ticket Extraction Attacks
+		- [ ] AS-REPRoasting Attack
+		- [x] Kerberoasting Attack [Lab #06]
+		- [x] Targeted Kerberoasting Attack [Lab #07]
+	- Kerberos Delegation Abuse
+		- [x] Unconstrained Delegation Abuse [Lab #11]
+		- [x] Constrained Delegation Abuse [Lab #12]
+		- [x] RBCD (Resource-based Constrained Delegation) Abuse [Lab #13]
+	- Kerberos Ticket Persistence Attacks
+		- [x] Golden Ticket Attack [Lab #14]
+		- [x] Silver Ticket Attack [Lab #15]
 
 ---
 ---
