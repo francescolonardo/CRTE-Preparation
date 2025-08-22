@@ -22,7 +22,7 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 
 ## Learning Path Topics
 
-1. [Domain Enumeration](./01_crte_domain_enumeration.md)
+### 01 [Domain Enumeration](./01_crte_domain_enumeration.md)
 	- [x] Domain User Enumeration [Lab #01]
 	- [x] Domain Computer Enumeration [Lab #01]
 	- [x] Domain & Enterprise Admin Enumeration [Lab #01]
@@ -33,11 +33,11 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 	- [x] ACL Enumeration [Lab #03]
 	- [x] Domain & Forest Trust Enumeration [Lab #04]
 
-2. [Privilege Escalation](./02_crte_privilege_escalation.md)
+### 02 [Privilege Escalation](./02_crte_privilege_escalation.md)
 	- [x] Local Privilege Escalation via Service Abuse [Lab #05.1]
 	- [x] Domain Privilege Escalation via ACL/Group Abuse [Lab #05.2]
 
-3. [Credential Extraction](./03_crte_credential_extraction.md)
+### 03 [Credential Extraction](./03_crte_credential_extraction.md)
 	 - Disk-based Credential Extraction
 		- [ ] Registry Hives (SAM, SECURITY, SYSTEM)
 	- Memory-based Credential Extraction
@@ -49,7 +49,7 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 	- Replication-based Credential Extraction
 		- [x] DCSync Attack via ACL Abuse
 
-4. [Kerberos Attacks](./04_crte_kerberos_attacks.md)
+### 04 [Kerberos Attacks](./04_crte_kerberos_attacks.md)
 	- Kerberos Ticket Extraction Attacks
 		- [ ] AS-REPRoasting Attack
 		- [x] Kerberoasting Attack [Lab #06]
@@ -62,10 +62,10 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 		- [x] Golden Ticket Attack [Lab #14]
 		- [x] Silver Ticket Attack [Lab #15]
 
-5. [AD CS (Certificate Services) Attacks](./05_crte_ad_cs_attacks.md)
+### 05 [AD CS (Certificate Services) Attacks](./05_crte_ad_cs_attacks.md)
 	- [x] AD CS (Certificate Services) ESC1 Abuse [Lab #17]
 
-6. [AD Trust Attacks](./06_crte_ad_trust_attacks.md)
+### 06 [AD Trust Attacks](./06_crte_ad_trust_attacks.md)
 	- Intra-Forest Trust Attacks 
 		- [x] Intra-Forest Unconstrained Delegation Abuse [Lab #18]
 		- [x] Intra-Forest Azure AD Connect Abuse [Lab #19]
