@@ -41,8 +41,6 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 
 ### 03 [Credential Extraction](./03_crte_credential_extraction.md)
 
- - Disk-based Credential Extraction
-	- [ ] Registry Hives (SAM, SECURITY, SYSTEM)
 - Memory-based Credential Extraction
 	- [x] LSASS Dump [Lab #09]
 	- [x] LSASS Dump with MDE & WDAC Bypassing [Lab #10.2]
@@ -55,7 +53,6 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 ### 04 [Kerberos Attacks](./04_crte_kerberos_attacks.md)
 
 - Kerberos Ticket Extraction Attacks
-	- [ ] AS-REPRoasting Attack
 	- [x] Kerberoasting Attack [Lab #06]
 	- [x] Targeted Kerberoasting Attack [Lab #07]
 - Kerberos Delegation Abuse
