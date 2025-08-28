@@ -43,12 +43,14 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 
 - Memory-based Credential Extraction
 	- [x] LSASS Dump [Lab #09]
-	- [x] LSASS Dump with MDE & WDAC Bypassing [Lab #10.2]
+	- [x] LSASS Dump & User Hunting [Lab #13.2]
+	- [x] LSASS Dump with MDE & WDAC Bypass [Lab #10.2]
+	- [x] LSA Secrets Dump [Lab #14.2]
 - AD Attribute-based Credential Extraction
 	- [x] LAPS (Local Administrator Password Solution) Abuse [Lab #08]
 	- [x] GMSA (Group Managed Service Account) Abuse [Lab #10.1]
 - Replication-based Credential Extraction
-	- [x] DCSync Attack via ACL Abuse
+	- [x] DCSync Attack via ACL Abuse [Lab #16]
 
 ### 04 [Kerberos Attacks](./04_crte_kerberos_attacks.md)
 
@@ -56,11 +58,11 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 	- [x] Kerberoasting Attack [Lab #06]
 	- [x] Targeted Kerberoasting Attack [Lab #07]
 - Kerberos Delegation Abuse
-	- [x] Unconstrained Delegation Abuse [Lab #11]
+	- [x] Unconstrained Delegation & Printer Bug Abuse [Lab #11]
 	- [x] Constrained Delegation Abuse [Lab #12]
-	- [x] RBCD (Resource-based Constrained Delegation) Abuse [Lab #13]
+	- [x] RBCD (Resource-based Constrained Delegation) Abuse [Lab #13.1]
 - Kerberos Ticket Persistence Attacks
-	- [x] Golden Ticket Attack [Lab #14]
+	- [x] Golden Ticket Attack [Lab #14.1]
 	- [x] Silver Ticket Attack [Lab #15]
 
 ### 05 [AD CS (Certificate Services) Attacks](./05_crte_ad_cs_attacks.md)
@@ -70,14 +72,14 @@ Whether you are preparing for the CRTE certification or aiming to strengthen you
 ### 06 [AD Trust Attacks](./06_crte_ad_trust_attacks.md)
 
 - Intra-Forest Trust Attacks 
-	- [x] Intra-Forest Unconstrained Delegation Abuse [Lab #18]
-	- [x] Intra-Forest Azure AD Connect Abuse [Lab #19]
+	- [x] Intra-Forest Unconstrained Delegation & Printer Bug Abuse & DCSync Attack [Lab #18]
+	- [x] Intra-Forest Constrained Delegation Abuse & DCSync Attack [Lab #23]
+	- [x] Intra-Forest Azure AD Connect Abuse & DCSync Attack [Lab #19]
 	- [x] Intra-Forest Trust Key Abuse via SID History Injection [Lab #20]
 	- [x] Intra-Forest ExtraSID Attack [Lab #21]
 - Cross-Forest Trust Attacks
 	- [x] Cross-Forest Kerberoasting Attack [Lab #22]
-	- [x] Cross-Forest Constrained Delegation Abuse [Lab #23]
-	- [x] Cross-Forest Unconstrained Delegation Abuse [Lab #24]
+	- [x] Cross-Forest Unconstrained Delegation & Printer Bug Abuse & DCSync Attack [Lab #24]
 	- [x] Cross-Forest Trust Account Abuse & SID History Injection [Lab #25]
 	- [x] Cross-Forest SQL Server Link Abuse [Lab #26]
 	- [x] Cross-Forest Foreign Security Principal & ACL Abuse [Lab #27]
