@@ -11,12 +11,12 @@ This repository is dedicated to documenting my preparation for the Certified Red
 The materials are organized to build a step-by-step understanding of each technique, enriched with detailed examples, executed commands, and their corresponding outputs. This structure allows readers to follow the learning path and grasp the reasoning behind each attack without necessarily replicating every lab.
 
 The repository covers a wide range of red teaming techniques beyond domain enumeration and privilege escalation, extending into cross-trust attacks, Active Directory Certificate Services (AD CS) exploitation, and advanced Kerberos abuse. Topics include:
-- Domain Enumeration – users, computers, OUs, GPOs, ACLs, and trust relationships.
-- Privilege Escalation – from local service abuse to domain privilege escalation via ACL and group abuse.
-- Credential Extraction – from LSASS dumps (with MDE & WDAC bypasses) to replication-based attacks like DCSync.
-- Kerberos Attacks – roasting attacks, delegation abuse, ticket forgery, and persistence techniques.
-- AD CS (Certificate Services) Attacks – ESC1 exploitation.
-- AD Trust Attacks – intra-forest and cross-forest abuses, including delegation, SID history injection, CredSSP abuse, SQL Server link abuse, and trust transitivity bypass.
+- **Domain Enumeration** – users, computers, OUs, GPOs, ACLs, and trust relationships.
+- **Privilege Escalation** – from local service abuse to domain privilege escalation via ACL and group abuse.
+- **Credential Extraction** – from LSASS dumps (with MDE & WDAC bypasses) to replication-based attacks like DCSync.
+- **Kerberos Attacks** – roasting attacks, delegation abuse, ticket forgery, and persistence techniques.
+- **AD CS (Certificate Services) Attacks** – ESC1 exploitation.
+- **AD Trust Attacks** – intra-forest and cross-forest abuses, including delegation, SID history injection, CredSSP abuse, SQL Server link abuse, and trust transitivity bypass.
 
 Whether you are preparing for the CRTE certification or aiming to strengthen your expertise in advanced Active Directory red teaming, this repository serves both as a technical study guide and as a reference resource for offensive security professionals.
 
