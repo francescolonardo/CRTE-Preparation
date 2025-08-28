@@ -947,7 +947,7 @@ WhenCreated     : 7/13/2019 11:17:35 AM
 WhenChanged     : 4/23/2025 5:20:33 AM
 ```
 
-**Note**: we have a bi-directional trust with `eu.local`, in a bi-directional trust or incoming one-way trust from `eu.local` to `us.techcorp.local`, we can extract information from the `eu.local` forest.
+⚠️ **Note**: we have a bi-directional trust with `eu.local`. In a bi-directional trust or incoming one-way trust from `eu.local` to `us.techcorp.local`, we can extract information from the `eu.local` forest.
 
 **AD Module**
 
